@@ -1,6 +1,20 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { 
+  collection, 
+  doc, 
+  getDoc, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot 
+} from 'firebase/firestore';
 
 export interface FormField {
   id: string;
@@ -19,45 +33,50 @@ export interface FormField {
 
 export interface CustomForm {
   id: string;
+  account_id: string;
   title: string;
   description: string | null;
-  fields: FormField[];
-  styling: {
-    theme: 'light' | 'dark' | 'auto';
-    primaryColor: string;
-    borderRadius: string;
-    fontSize: string;
-  };
+  fields: Record<string, any>;
+  settings?: Record<string, any>;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  total_responses: number;
+  total_responses?: number;
 }
 
 export interface FormResponse {
   id: string;
+  account_id: string;
   form_id: string;
   response_data: Record<string, any>;
   submitted_at: string;
-  ip_address: string | null;
-  user_agent: string | null;
 }
 
 export const useCustomForms = () => {
   const [forms, setForms] = useState<CustomForm[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchForms = async () => {
+    if (!user?.accountId) {
+      setForms([]);
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('custom_forms')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setForms((data as any) || []);
+      const q = query(
+        collection(db, 'custom_forms'), 
+        where('account_id', '==', user.accountId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomForm));
+      
+      // Sort in memory as composite index might be needed otherwise
+      setForms(data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     } catch (error: any) {
       console.error('Error fetching forms:', error);
       toast({
@@ -70,23 +89,28 @@ export const useCustomForms = () => {
     }
   };
 
-  const createForm = async (form: Omit<CustomForm, 'id' | 'created_at' | 'updated_at' | 'total_responses'>) => {
+  const createForm = async (form: Pick<CustomForm, 'title' | 'description' | 'fields' | 'settings'>) => {
+    if (!user?.accountId) throw new Error('Não autenticado');
+    
     try {
-      const { data, error } = await supabase
-        .from('custom_forms')
-        .insert([form as any])
-        .select()
-        .single();
-
-      if (error) throw error;
+      const formPayload: Omit<CustomForm, 'id'> = {
+        ...form,
+        fields: form.fields || {},
+        settings: form.settings || {},
+        account_id: user.accountId,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      const docRef = await addDoc(collection(db, 'custom_forms'), formPayload);
 
       toast({
         title: 'Formulário criado!',
         description: 'Seu formulário foi criado com sucesso.',
       });
 
-      await fetchForms();
-      return data;
+      return { id: docRef.id, ...formPayload };
     } catch (error: any) {
       console.error('Error creating form:', error);
       toast({
@@ -100,19 +124,18 @@ export const useCustomForms = () => {
 
   const updateForm = async (id: string, updates: Partial<CustomForm>) => {
     try {
-      const { error } = await supabase
-        .from('custom_forms')
-        .update(updates as any)
-        .eq('id', id);
-
-      if (error) throw error;
+      const docRef = doc(db, 'custom_forms', id);
+      const updatePayload = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+      
+      await updateDoc(docRef, updatePayload);
 
       toast({
         title: 'Formulário atualizado!',
         description: 'As alterações foram salvas.',
       });
-
-      await fetchForms();
     } catch (error: any) {
       console.error('Error updating form:', error);
       toast({
@@ -126,19 +149,12 @@ export const useCustomForms = () => {
 
   const deleteForm = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('custom_forms')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await deleteDoc(doc(db, 'custom_forms', id));
 
       toast({
         title: 'Formulário excluído',
         description: 'O formulário foi removido com sucesso.',
       });
-
-      await fetchForms();
     } catch (error: any) {
       console.error('Error deleting form:', error);
       toast({
@@ -152,14 +168,13 @@ export const useCustomForms = () => {
 
   const getFormById = async (id: string): Promise<CustomForm | null> => {
     try {
-      const { data, error } = await supabase
-        .from('custom_forms')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const docRef = doc(db, 'custom_forms', id);
+      const docSnap = await getDoc(docRef);
 
-      if (error) throw error;
-      return data as any;
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as CustomForm;
+      }
+      return null;
     } catch (error: any) {
       console.error('Error fetching form:', error);
       return null;
@@ -168,14 +183,14 @@ export const useCustomForms = () => {
 
   const getFormResponses = async (formId: string): Promise<FormResponse[]> => {
     try {
-      const { data, error } = await supabase
-        .from('form_responses')
-        .select('*')
-        .eq('form_id', formId)
-        .order('submitted_at', { ascending: false });
-
-      if (error) throw error;
-      return (data as any) || [];
+      const q = query(
+        collection(db, 'form_responses'),
+        where('form_id', '==', formId)
+      );
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FormResponse));
+      
+      return data.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
     } catch (error: any) {
       console.error('Error fetching form responses:', error);
       toast({
@@ -188,20 +203,28 @@ export const useCustomForms = () => {
   };
 
   useEffect(() => {
-    fetchForms();
+    if (!user?.accountId) {
+      setLoading(false);
+      return;
+    }
 
     // Realtime updates
-    const channel = supabase
-      .channel('custom-forms-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_forms' }, () => {
-        fetchForms();
-      })
-      .subscribe();
+    const q = query(
+      collection(db, 'custom_forms'),
+      where('account_id', '==', user.accountId)
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomForm));
+      setForms(data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      setLoading(false);
+    }, (error) => {
+      console.error('Realtime error:', error);
+      setLoading(false);
+    });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    return () => unsubscribe();
+  }, [user?.accountId]);
 
   return {
     forms,

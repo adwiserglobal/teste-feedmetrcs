@@ -1,0 +1,152 @@
+{
+  "entities": {
+    "Account": {
+      "title": "Account",
+      "description": "An account that groups users and app data within a domain",
+      "type": "object",
+      "properties": {
+        "account_code": { "type": "string" },
+        "created_at": { "type": "string" },
+        "name": { "type": "string" },
+        "plan_type": { "type": "string" },
+        "status": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["account_code", "created_at", "name", "updated_at"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "User profile that maps to a Firebase Auth user",
+      "type": "object",
+      "properties": {
+        "account_id": { "type": "string" },
+        "avatar_url": { "type": "string" },
+        "created_at": { "type": "string" },
+        "email": { "type": "string" },
+        "full_name": { "type": "string" },
+        "updated_at": { "type": "string" },
+        "user_code": { "type": "string" }
+      },
+      "required": ["account_id", "created_at", "email", "full_name", "updated_at", "user_code"]
+    },
+    "CustomForm": {
+      "title": "CustomForm",
+      "description": "A form created by a user",
+      "type": "object",
+      "properties": {
+        "account_id": { "type": "string" },
+        "created_at": { "type": "string" },
+        "description": { "type": "string" },
+        "fields": { "type": "object" },
+        "is_active": { "type": "boolean" },
+        "settings": { "type": "object" },
+        "title": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["account_id", "created_at", "fields", "is_active", "title", "updated_at"]
+    },
+    "FormResponse": {
+      "title": "FormResponse",
+      "description": "Responses to a custom form",
+      "type": "object",
+      "properties": {
+        "account_id": { "type": "string" },
+        "form_id": { "type": "string" },
+        "response_data": { "type": "object" },
+        "submitted_at": { "type": "string" }
+      },
+      "required": ["account_id", "form_id", "response_data", "submitted_at"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "General feedback submission",
+      "type": "object",
+      "properties": {
+        "account_id": { "type": "string" },
+        "created_at": { "type": "string" },
+        "ease_rating": { "type": "number" },
+        "experience_rating": { "type": "number" },
+        "feedback_type": { "type": "string" },
+        "improvement_suggestions": { "type": "string" },
+        "templates_rating": { "type": "number" }
+      },
+      "required": ["account_id", "created_at", "ease_rating", "experience_rating", "feedback_type"]
+    },
+    "AnalyticsCache": {
+      "title": "AnalyticsCache",
+      "description": "Cached insights or AI responses",
+      "type": "object",
+      "properties": {
+        "account_id": { "type": "string" },
+        "analysis_type": { "type": "string" },
+        "cache_key": { "type": "string" },
+        "created_at": { "type": "string" },
+        "data": { "type": "object" },
+        "expires_at": { "type": "string" }
+      },
+      "required": ["account_id", "analysis_type", "cache_key", "created_at", "data", "expires_at"]
+    },
+    "InsightsHistory": {
+      "title": "InsightsHistory",
+      "description": "Saved analytics histories for an account",
+      "type": "object",
+      "properties": {
+        "account_id": { "type": "string" },
+        "created_at": { "type": "string" },
+        "insights_data": { "type": "object" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["account_id", "created_at", "insights_data"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notifications",
+      "type": "object",
+      "properties": {
+        "account_id": { "type": "string" },
+        "created_at": { "type": "string" },
+        "link": { "type": "string" },
+        "message": { "type": "string" },
+        "metadata": { "type": "object" },
+        "read": { "type": "boolean" },
+        "title": { "type": "string" },
+        "type": { "type": "string" }
+      },
+      "required": ["account_id", "created_at", "message", "read", "title", "type"]
+    }
+  },
+  "firestore": {
+    "/accounts/{accountId}": {
+      "schema": { "$ref": "#/entities/Account" },
+      "description": "Tenant accounts for multi-tenancy"
+    },
+    "/profiles/{userId}": {
+      "schema": { "$ref": "#/entities/Profile" },
+      "description": "User profiles, userId matches Auth ID"
+    },
+    "/custom_forms/{formId}": {
+      "schema": { "$ref": "#/entities/CustomForm" },
+      "description": "Forms created by the account"
+    },
+    "/form_responses/{responseId}": {
+      "schema": { "$ref": "#/entities/FormResponse" },
+      "description": "Responses to forms"
+    },
+    "/feedbacks/{feedbackId}": {
+      "schema": { "$ref": "#/entities/Feedback" },
+      "description": "Public or private user feedback"
+    },
+    "/ai_analysis_cache/{cacheId}": {
+      "schema": { "$ref": "#/entities/AnalyticsCache" },
+      "description": "AI analysis cache entries"
+    },
+    "/insights_history/{insightId}": {
+      "schema": { "$ref": "#/entities/InsightsHistory" },
+      "description": "Stored AI insights"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "User account notifications"
+    }
+  }
+}

@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false; // Deny by default
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { 
+      return false; 
+    }
+    
+    function isValidId(id) { 
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidAccountUser(accountId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.account_id == accountId;
+    }
+
+    match /accounts/{accountId} {
+      function isValidAccount(data) {
+        return data.size() >= 4 && data.size() <= 6
+          && data.account_code is string && data.account_code.size() <= 50
+          && data.name is string && data.name.size() <= 100
+          && data.created_at is string && data.created_at.size() <= 50
+          && data.updated_at is string && data.updated_at.size() <= 50;
+      }
+      allow get: if isSignedIn() && isValidAccountUser(accountId);
+      allow list: if false;
+      allow create: if isSignedIn() && isValidId(accountId) && isValidAccount(incoming());
+      allow update: if isSignedIn() && isValidId(accountId) && isValidAccountUser(accountId) && isValidAccount(incoming()) 
+                     && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'plan_type', 'status', 'updated_at']);
+    }
+
+    match /profiles/{userId} {
+      function isValidProfile(data) {
+        return data.size() >= 6 && data.size() <= 7 
+          && data.account_id is string && data.account_id.size() <= 128
+          && data.email is string && data.email.size() <= 200
+          && data.full_name is string && data.full_name.size() <= 200
+          && data.user_code is string && data.user_code.size() <= 50
+          && data.created_at is string && data.created_at.size() <= 50
+          && data.updated_at is string && data.updated_at.size() <= 50;
+      }
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidProfile(incoming());
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidProfile(incoming())
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['full_name', 'avatar_url', 'updated_at']);
+    }
+
+    match /custom_forms/{formId} {
+      function isValidForm(data) {
+        return data.size() >= 6 && data.size() <= 8
+          && data.account_id is string && data.account_id.size() <= 128
+          && data.title is string && data.title.size() <= 200
+          && data.fields is map 
+          && data.is_active is bool
+          && data.created_at is string && data.created_at.size() <= 50
+          && data.updated_at is string && data.updated_at.size() <= 50;
+      }
+      allow get: if true; // Public access to form schema is often needed
+      allow list: if isValidAccountUser(existing().account_id);
+      allow create: if isSignedIn() && isValidId(formId) && isValidAccountUser(incoming().account_id) && isValidForm(incoming());
+      allow update: if isSignedIn() && isValidId(formId) && isValidAccountUser(existing().account_id) && isValidForm(incoming())
+                    && incoming().account_id == existing().account_id
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'fields', 'is_active', 'settings', 'updated_at']);
+      allow delete: if isSignedIn() && isValidId(formId) && isValidAccountUser(existing().account_id);
+    }
+
+    match /form_responses/{responseId} {
+      function isValidResponse(data) {
+        return data.size() >= 3 && data.size() <= 4
+          && data.form_id is string && data.form_id.size() <= 128
+          && data.response_data is map
+          && data.submitted_at is string && data.submitted_at.size() <= 50;
+      }
+      allow get, list: if isSignedIn() && isValidAccountUser(existing().account_id);
+      allow create: if isValidId(responseId) && isValidResponse(incoming()); // Public submits are allowed
+      allow update, delete: if false;
+    }
+
+    match /feedbacks/{feedbackId} {
+      function isValidFeedback(data) {
+         return data.size() >= 5 && data.size() <= 7
+          && data.feedback_type is string && data.feedback_type.size() <= 50
+          && data.ease_rating is number
+          && data.experience_rating is number
+          && data.created_at is string && data.created_at.size() <= 50;
+      }
+      allow get, list: if isSignedIn() && isValidAccountUser(existing().account_id);
+      allow create: if isValidId(feedbackId) && isValidFeedback(incoming()); // Public feedback allowed
+      allow update, delete: if false;
+    }
+
+    match /ai_analysis_cache/{cacheId} {
+      allow read, write: if false; // Server side only
+    }
+
+    match /insights_history/{insightId} {
+      function isValidInsight(data) {
+         return data.size() >= 3 && data.size() <= 4
+          && data.account_id is string && data.account_id.size() <= 128
+          && data.insights_data is map
+          && data.created_at is string && data.created_at.size() <= 50;
+      }
+      allow get, list: if isSignedIn() && isValidAccountUser(existing().account_id);
+      allow create: if isSignedIn() && isValidId(insightId) && isValidAccountUser(incoming().account_id) && isValidInsight(incoming());
+      allow update, delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+       function isValidNotification(data) {
+         return data.size() >= 6 && data.size() <= 8
+          && data.account_id is string && data.account_id.size() <= 128
+          && data.title is string && data.title.size() <= 200
+          && data.message is string && data.message.size() <= 1000
+          && data.read is bool
+          && data.type is string && data.type.size() <= 100
+          && data.created_at is string && data.created_at.size() <= 50;
+      }
+      allow get, list: if isSignedIn() && isValidAccountUser(existing().account_id);
+      allow create: if isSignedIn() && isValidId(notificationId) && isValidAccountUser(incoming().account_id) && isValidNotification(incoming());
+      allow update: if isSignedIn() && isValidId(notificationId) && isValidAccountUser(existing().account_id) && isValidNotification(incoming())
+                    && incoming().account_id == existing().account_id
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+      allow delete: if isSignedIn() && isValidId(notificationId) && isValidAccountUser(existing().account_id);
+    }
+  }
+}
