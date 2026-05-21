@@ -1,6 +1,6 @@
 {
-  "name": "Blank Screen",
-  "description": "A completely blank white screen.",
+  "name": "Market Data Studio",
+  "description": "Análise avançada de tendências de mercado com integração de IA e dados reais do YouTube.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // -------------------------------------------------------------------------
+    // GLOBAL HELPERS
+    // -------------------------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'fromhostscience@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // -------------------------------------------------------------------------
+    // ENTITY VALIDATORS
+    // -------------------------------------------------------------------------
+    
+    function isValidMarketInsight(data) {
+      return data.keys().hasAll(['query', 'insights_data', 'created_at'])
+        && data.query is string && data.query.size() <= 500
+        && data.insights_data is map
+        && (data.account_id == null || data.account_id is string)
+        && data.created_at == request.time;
+    }
+
+    function isValidTrendReport(data) {
+      return data.keys().hasAll(['cache_key', 'data', 'created_at'])
+        && data.cache_key is string && data.cache_key.size() <= 200
+        && data.data is map;
+    }
+
+    // -------------------------------------------------------------------------
+    // COLLECTIONS
+    // -------------------------------------------------------------------------
+    
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /insights_history/{insightId} {
+      allow read, list: if isSignedIn() && (resource.data.account_id == request.auth.uid || isAdmin());
+      allow create: if isEmailVerified() && isValidMarketInsight(incoming()) && (incoming().account_id == request.auth.uid || incoming().account_id == null);
+      allow update: if false; // Reports are immutable for now
+      allow delete: if isSignedIn() && (resource.data.account_id == request.auth.uid || isAdmin());
+    }
+
+    match /ai_analysis_cache/{cacheId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Managed via console
+    }
+  }
+}

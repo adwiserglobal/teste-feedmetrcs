@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 import { Brain, Loader2, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -9,6 +8,8 @@ import { useNavigate } from "react-router-dom";
 interface InsightsCardProps {
   feedbacks: any[];
 }
+import { LoadingAnimation } from "./LoadingAnimation";
+
 export function InsightsCard({
   feedbacks
 }: InsightsCardProps) {
@@ -23,16 +24,22 @@ export function InsightsCard({
   const generateInsights = async () => {
     try {
       setLoading(true);
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('generate-insights', {
-        body: {
-          feedbacks
-        }
+      const response = await fetch('/api/generate-insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedbacks }),
       });
-      if (error) {
-        console.error('Error generating insights:', error);
+      let data: any = {};
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        data = await response.json();
+      } else {
+        const textFallback = await response.text();
+        throw new Error("Formato de resposta inválido retornado pelo servidor.");
+      }
+      
+      if (!response.ok || data.error) {
+        console.error('Error generating insights:', data.error);
         toast({
           title: "Erro ao gerar insights",
           description: "Não foi possível gerar insights no momento.",
@@ -77,9 +84,7 @@ export function InsightsCard({
         </div>
       </CardHeader>
       <CardContent className="pt-6">
-        {loading ? <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div> : <div className="space-y-4">
+        {loading ? <LoadingAnimation subtitle="Extraindo insights relevantes..." /> : <div className="space-y-4">
             <div className="prose prose-sm max-w-none">
               <p className="whitespace-pre-wrap text-foreground leading-relaxed">
                 {isExpanded ? insight : getPreviewText(insight)}

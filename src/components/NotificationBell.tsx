@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Check, CheckCheck, Loader2, ExternalLink } from "lucide-react";
+import { Bell, Check, CheckCheck, Loader2, ExternalLink, MessageSquare, FileText, Lightbulb, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -15,10 +15,10 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
 const notificationIcons = {
-  new_feedback: "💬",
-  form_response: "📝",
-  new_insight: "💡",
-  account: "👤",
+  new_feedback: <MessageSquare className="w-4 h-4" />,
+  form_response: <FileText className="w-4 h-4" />,
+  new_insight: <Lightbulb className="w-4 h-4" />,
+  account: <User className="w-4 h-4" />,
 };
 
 const notificationColors = {

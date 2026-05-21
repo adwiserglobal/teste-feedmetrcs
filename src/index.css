@@ -1,1 +1,165 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Modern Customer Experience Platform Design System */
+
+@layer base {
+  :root {
+    /* Light Mode Colors - Clean and Professional */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 47.4% 11.2%;
+
+    --radius: 9px;
+
+    /* Experience Platform Colors */
+    --excellent: 142 76% 36%;
+    --excellent-foreground: 0 0% 98%;
+    --good: 84 81% 44%;
+    --good-foreground: 0 0% 9%;
+    --average: 48 96% 53%;
+    --average-foreground: 0 0% 9%;
+    --poor: 0 84% 60%;
+    --poor-foreground: 0 0% 98%;
+    --very-poor: 0 84% 50%;
+    --very-poor-foreground: 0 0% 98%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(142 76% 46%));
+    --gradient-success: linear-gradient(135deg, hsl(var(--excellent)), hsl(var(--good)));
+    --gradient-warning: linear-gradient(135deg, hsl(var(--average)), hsl(48 96% 63%));
+    --gradient-danger: linear-gradient(135deg, hsl(var(--poor)), hsl(var(--very-poor)));
+    --gradient-card: linear-gradient(145deg, hsl(240 10% 3.9%), hsl(240 8% 6%));
+
+    /* Shadows */
+    --shadow-elegant: 0 10px 30px -10px hsl(0 0% 0% / 0.3);
+    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.2);
+    --shadow-card: 0 4px 20px -2px hsl(0 0% 0% / 0.25);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 222.2 47.4% 11.2%;
+    --sidebar-primary: 222.2 47.4% 11.2%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 215 20.2% 65.1%;
+  }
+
+  .dark {
+    /* Dark Mode Colors - Deep Blue Theme with Glassmorphism */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 15%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 15%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+
+    --secondary: 222 47% 20%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 222 47% 20%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 222 47% 20%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 222 47% 25%;
+    --input: 222 47% 20%;
+    --ring: 217.2 91.2% 59.8%;
+
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 222.2 84% 4.9%;
+    --sidebar-accent: 222 47% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 47% 20%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Glassmorphism */
+    --glass-bg: 222 47% 15%;
+    --glass-border: 217 91% 60%;
+    --glass-active: linear-gradient(135deg, hsl(195 100% 50%), hsl(217 91% 60%));
+    --glass-hover: 222 47% 18%;
+
+    /* Experience Platform Colors - Dark Mode */
+    --excellent: 142 76% 36%;
+    --excellent-foreground: 0 0% 98%;
+    --good: 84 81% 44%;
+    --good-foreground: 0 0% 9%;
+    --average: 48 96% 53%;
+    --average-foreground: 0 0% 9%;
+    --poor: 0 84% 60%;
+    --poor-foreground: 0 0% 98%;
+    --very-poor: 0 84% 50%;
+    --very-poor-foreground: 0 0% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--accent));
+  }
+}

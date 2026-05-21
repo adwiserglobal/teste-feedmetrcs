@@ -49,12 +49,23 @@ export default function Forms() {
   );
 
   const copyFormLink = (formId: string) => {
-    const link = `${window.location.origin}/form/${formId}`;
+    // We use the full URL if we can guess it, otherwise a relative path in the app
+    const baseUrl = window.location.hostname.includes('aistudio.google.com')
+      ? 'https://ais-dev-cqnno4n2lsx5jkwf4mepmg-62250769035.us-east1.run.app'
+      : window.location.origin;
+    const link = `${baseUrl}/form/${formId}`;
     navigator.clipboard.writeText(link);
     toast({
       title: "Link copiado!",
       description: "O link do formulário foi copiado para a área de transferência.",
     });
+  };
+
+  const getFormUrl = (formId: string) => {
+    const baseUrl = window.location.hostname.includes('aistudio.google.com')
+      ? 'https://ais-dev-cqnno4n2lsx5jkwf4mepmg-62250769035.us-east1.run.app'
+      : window.location.origin;
+    return `${baseUrl}/form/${formId}`;
   };
 
   const toggleFormStatus = async (formId: string, currentStatus: boolean) => {
@@ -153,7 +164,7 @@ export default function Forms() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(`/form/${form.id}`, '_blank')}
+                        onClick={() => window.open(getFormUrl(form.id), '_blank')}
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         Visualizar
@@ -251,7 +262,7 @@ export default function Forms() {
             <div className="bg-white p-4 rounded-lg">
               {selectedFormId && (
                 <iframe
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`${window.location.origin}/form/${selectedFormId}`)}`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`${window.location.hostname.includes('aistudio.google.com') ? 'https://ais-dev-cqnno4n2lsx5jkwf4mepmg-62250769035.us-east1.run.app' : window.location.origin}/form/${selectedFormId}`)}`}
                   className="w-[300px] h-[300px] border-none"
                   title="QR Code"
                 />
@@ -260,7 +271,7 @@ export default function Forms() {
             <Button
               onClick={() => {
                 const link = document.createElement('a');
-                link.href = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(`${window.location.origin}/form/${selectedFormId}`)}`;
+                link.href = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(`${window.location.hostname.includes('aistudio.google.com') ? 'https://ais-dev-cqnno4n2lsx5jkwf4mepmg-62250769035.us-east1.run.app' : window.location.origin}/form/${selectedFormId}`)}`;
                 link.download = `qrcode-formulario-${selectedFormId}.png`;
                 link.click();
               }}
@@ -271,7 +282,6 @@ export default function Forms() {
             </Button>
             <div className="text-sm text-muted-foreground space-y-1">
               <p className="flex items-center gap-2">
-                <span>💡</span>
                 <span className="font-medium">Dicas para Impressão:</span>
               </p>
               <ul className="list-disc list-inside space-y-1 text-xs">

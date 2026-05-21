@@ -21,11 +21,29 @@ export function WordCloud() {
   const loadWordCloud = async (retryCount = 0) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke('generate-word-cloud');
+      // We must gather feedbacks to send to have them analyzed over there.
+      // We'll fetch them here.
+      const { data: dbFeedbacks, error: dbError } = await supabase.from('feedbacks').select('*');
+      if (dbError) throw dbError;
+
+      const response = await fetch('/api/generate-word-cloud', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedbacks: dbFeedbacks }),
+      });
+      let data: any = {};
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        data = await response.json();
+      } else {
+        const textFallback = await response.text();
+        throw new Error("Resposta inválida do servidor.");
+      }
       
-      if (error) {
+      if (!response.ok || data.error) {
+        const errorMsg = data.error || 'Server error';
         // Verificar se é erro de rate limit
-        if (error.message?.includes('429') || error.message?.includes('rate limit')) {
+        if (errorMsg.includes('429') || errorMsg.includes('rate limit')) {
           if (retryCount < 2) {
             // Tentar novamente após alguns segundos
             const delay = (retryCount + 1) * 3000; // 3s, 6s

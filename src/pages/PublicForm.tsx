@@ -8,23 +8,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useCustomForms, CustomForm, FormField } from "@/hooks/useCustomForms";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+
 export default function PublicForm() {
-  const {
-    id
-  } = useParams();
-  const {
-    getFormById
-  } = useCustomForms();
+  const { id } = useParams();
+  const { getFormById } = useCustomForms();
+  const { toast } = useToast();
   const [form, setForm] = useState<CustomForm | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
     loadForm();
   }, [id]);
+
   const loadForm = async () => {
     if (!id) return;
     setLoading(true);
@@ -32,6 +34,7 @@ export default function PublicForm() {
     setForm(formData);
     setLoading(false);
   };
+
   const handleRatingClick = (fieldName: string, value: number) => {
     setFormData({
       ...formData,
@@ -42,6 +45,7 @@ export default function PublicForm() {
       [fieldName]: ''
     });
   };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     form?.fields.forEach(field => {
@@ -52,29 +56,31 @@ export default function PublicForm() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm() || !form) return;
     setSubmitting(true);
     try {
-      const {
-        error
-      } = await supabase.functions.invoke('submit-form-response', {
-        body: {
-          formId: form.id,
-          responseData: formData
-        }
+      await addDoc(collection(db, 'form_responses'), {
+        form_id: form.id,
+        response_data: formData,
+        submitted_at: serverTimestamp(),
       });
-      if (error) throw error;
       setSubmitted(true);
       setFormData({});
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('Erro ao enviar formulário. Tente novamente.');
+      toast({
+        title: 'Erro',
+        description: 'Erro ao enviar formulário. Tente novamente.',
+        variant: 'destructive'
+      });
     } finally {
       setSubmitting(false);
     }
   };
+
   const renderField = (field: FormField) => {
     const value = formData[field.name];
     const error = errors[field.name];

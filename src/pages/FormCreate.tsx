@@ -51,7 +51,7 @@ export default function FormCreate() {
   const [styling, setStyling] = useState({
     theme: 'auto' as 'light' | 'dark' | 'auto',
     primaryColor: '#3b82f6',
-    borderRadius: '8',
+    borderRadius: '9',
     fontSize: '16'
   });
   const [isActive, setIsActive] = useState(true);
@@ -231,7 +231,7 @@ export default function FormCreate() {
                           <Label>Tipo de Campo</Label>
                           <Select
                             value={field.type}
-                            onValueChange={(value: any) => updateField(field.id, { type: value })}
+                            onValueChange={(value: 'rating' | 'text' | 'select' | 'textarea' | 'email' | 'number') => updateField(field.id, { type: value })}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -310,7 +310,7 @@ export default function FormCreate() {
                               <Label>Estilo Visual</Label>
                               <Select
                                 value={field.ratingStyle || 'numbers'}
-                                onValueChange={(value: any) => updateField(field.id, { ratingStyle: value })}
+                                onValueChange={(value: 'numbers' | 'stars' | 'squares' | 'circles') => updateField(field.id, { ratingStyle: value })}
                               >
                                 <SelectTrigger>
                                   <SelectValue />
@@ -365,7 +365,7 @@ export default function FormCreate() {
                 <Label>Tema</Label>
                 <Select
                   value={styling.theme}
-                  onValueChange={(value: any) => setStyling({ ...styling, theme: value })}
+                  onValueChange={(value: 'light' | 'dark' | 'auto') => setStyling({ ...styling, theme: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -456,7 +456,7 @@ export default function FormCreate() {
                   Baixar QR Code (Alta Resolução)
                 </Button>
                 <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2 text-sm">💡 Dicas para Impressão</h4>
+                  <h4 className="font-semibold mb-2 text-sm">Dicas para Impressão</h4>
                   <ul className="text-xs space-y-1 text-muted-foreground">
                     <li>• Use papel de qualidade</li>
                     <li>• Tamanho recomendado: 10x10cm ou maior</li>

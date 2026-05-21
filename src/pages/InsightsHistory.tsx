@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 import { Brain, Calendar, Loader2, TrendingUp, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -9,12 +8,14 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { collection, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface InsightRecord {
   id: string;
-  insights_data: any;
+  insights_data: Record<string, unknown>;
   created_at: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
 }
 
 export default function InsightsHistory() {
@@ -30,27 +31,25 @@ export default function InsightsHistory() {
   const fetchInsightsHistory = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('insights_history')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const q = query(collection(db, 'insights_history'), orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(q);
+      
+      const records = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          created_at: data.created_at instanceof Timestamp ? data.created_at.toDate().toISOString() : data.created_at
+        } as InsightRecord;
+      });
 
-      if (error) {
-        console.error('Error fetching insights history:', error);
-        toast({
-          title: "Erro ao carregar histórico",
-          description: "Não foi possível carregar o histórico de insights.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      setInsights((data || []) as InsightRecord[]);
-    } catch (error) {
-      console.error('Error:', error);
+      setInsights(records);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error fetching insights history:', err);
       toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao carregar o histórico.",
+        title: "Erro ao carregar histórico",
+        description: err.message || "Não foi possível carregar o histórico de insights.",
         variant: "destructive"
       });
     } finally {

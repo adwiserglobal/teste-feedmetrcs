@@ -50,7 +50,7 @@ interface FormConfig {
 const defaultStyling = {
   theme: 'auto' as const,
   primaryColor: '#3b82f6',
-  borderRadius: '8',
+  borderRadius: '9',
   fontSize: '16'
 };
 
@@ -674,7 +674,7 @@ export function FormBuilder() {
 
               <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                  📋 Como usar:
+                  Como usar:
                 </h4>
                 <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                   <li>1. Copie o código HTML completo acima</li>

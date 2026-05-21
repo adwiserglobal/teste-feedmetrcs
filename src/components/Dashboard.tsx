@@ -26,11 +26,6 @@ export function Dashboard() {
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/95 backdrop-blur-md px-6 py-3">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
-          {user && (
-            <span className="text-xs text-muted-foreground font-mono">
-              ID da Conta: {user.accountCode}
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-2">
           <NotificationBell />

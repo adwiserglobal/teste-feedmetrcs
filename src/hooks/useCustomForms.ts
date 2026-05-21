@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
 import { 
   collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
+  query, 
+  orderBy, 
+  onSnapshot, 
   addDoc, 
   updateDoc, 
+  doc, 
   deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot 
+  getDoc, 
+  getDocs,
+  where,
+  serverTimestamp,
+  Timestamp
 } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export interface FormField {
   id: string;
@@ -33,150 +34,143 @@ export interface FormField {
 
 export interface CustomForm {
   id: string;
-  account_id: string;
   title: string;
   description: string | null;
-  fields: Record<string, any>;
-  settings?: Record<string, any>;
+  fields: FormField[];
+  styling: {
+    theme: 'light' | 'dark' | 'auto';
+    primaryColor: string;
+    borderRadius: string;
+    fontSize: string;
+  };
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  total_responses?: number;
+  total_responses: number;
 }
 
 export interface FormResponse {
   id: string;
-  account_id: string;
   form_id: string;
-  response_data: Record<string, any>;
+  response_data: Record<string, unknown>;
   submitted_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
 }
 
 export const useCustomForms = () => {
   const [forms, setForms] = useState<CustomForm[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { user } = useAuth();
 
-  const fetchForms = async () => {
-    if (!user?.accountId) {
-      setForms([]);
-      setLoading(false);
-      return;
-    }
+  useEffect(() => {
+    setLoading(true);
+    const q = query(collection(db, 'custom_forms'), orderBy('created_at', 'desc'));
     
-    try {
-      setLoading(true);
-      const q = query(
-        collection(db, 'custom_forms'), 
-        where('account_id', '==', user.accountId)
-      );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const formsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        created_at: doc.data().created_at instanceof Timestamp ? doc.data().created_at.toDate().toISOString() : doc.data().created_at,
+        updated_at: doc.data().updated_at instanceof Timestamp ? doc.data().updated_at.toDate().toISOString() : doc.data().updated_at,
+      })) as CustomForm[];
       
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomForm));
-      
-      // Sort in memory as composite index might be needed otherwise
-      setForms(data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-    } catch (error: any) {
+      setForms(formsData);
+      setLoading(false);
+    }, (error) => {
       console.error('Error fetching forms:', error);
-      toast({
-        title: 'Erro ao carregar formulários',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
       setLoading(false);
-    }
-  };
+    });
 
-  const createForm = async (form: Pick<CustomForm, 'title' | 'description' | 'fields' | 'settings'>) => {
-    if (!user?.accountId) throw new Error('Não autenticado');
-    
+    return () => unsubscribe();
+  }, []);
+
+  const createForm = async (form: Omit<CustomForm, 'id' | 'created_at' | 'updated_at' | 'total_responses'>) => {
     try {
-      const formPayload: Omit<CustomForm, 'id'> = {
+      const docRef = await addDoc(collection(db, 'custom_forms'), {
         ...form,
-        fields: form.fields || {},
-        settings: form.settings || {},
-        account_id: user.accountId,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      
-      const docRef = await addDoc(collection(db, 'custom_forms'), formPayload);
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+        total_responses: 0
+      });
 
       toast({
         title: 'Formulário criado!',
         description: 'Seu formulário foi criado com sucesso.',
       });
 
-      return { id: docRef.id, ...formPayload };
-    } catch (error: any) {
-      console.error('Error creating form:', error);
+      return { id: docRef.id };
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error creating form:', err);
       toast({
         title: 'Erro ao criar formulário',
-        description: error.message,
+        description: err.message,
         variant: 'destructive',
       });
-      throw error;
+      throw err;
     }
   };
 
   const updateForm = async (id: string, updates: Partial<CustomForm>) => {
     try {
-      const docRef = doc(db, 'custom_forms', id);
-      const updatePayload = {
+      const formRef = doc(db, 'custom_forms', id);
+      await updateDoc(formRef, {
         ...updates,
-        updated_at: new Date().toISOString()
-      };
-      
-      await updateDoc(docRef, updatePayload);
+        updated_at: serverTimestamp()
+      });
 
       toast({
         title: 'Formulário atualizado!',
         description: 'As alterações foram salvas.',
       });
-    } catch (error: any) {
-      console.error('Error updating form:', error);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error updating form:', err);
       toast({
         title: 'Erro ao atualizar formulário',
-        description: error.message,
+        description: err.message,
         variant: 'destructive',
       });
-      throw error;
+      throw err;
     }
   };
 
   const deleteForm = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'custom_forms', id));
-
       toast({
         title: 'Formulário excluído',
         description: 'O formulário foi removido com sucesso.',
       });
-    } catch (error: any) {
-      console.error('Error deleting form:', error);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error deleting form:', err);
       toast({
         title: 'Erro ao excluir formulário',
-        description: error.message,
+        description: err.message,
         variant: 'destructive',
       });
-      throw error;
+      throw err;
     }
   };
 
   const getFormById = async (id: string): Promise<CustomForm | null> => {
     try {
-      const docRef = doc(db, 'custom_forms', id);
-      const docSnap = await getDoc(docRef);
-
+      const docSnap = await getDoc(doc(db, 'custom_forms', id));
       if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as CustomForm;
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...data,
+          created_at: data.created_at instanceof Timestamp ? data.created_at.toDate().toISOString() : data.created_at,
+          updated_at: data.updated_at instanceof Timestamp ? data.updated_at.toDate().toISOString() : data.updated_at,
+        } as CustomForm;
       }
       return null;
-    } catch (error: any) {
-      console.error('Error fetching form:', error);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error fetching form:', err);
       return null;
     }
   };
@@ -184,47 +178,27 @@ export const useCustomForms = () => {
   const getFormResponses = async (formId: string): Promise<FormResponse[]> => {
     try {
       const q = query(
-        collection(db, 'form_responses'),
-        where('form_id', '==', formId)
+        collection(db, 'form_responses'), 
+        where('form_id', '==', formId),
+        orderBy('submitted_at', 'desc')
       );
       const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FormResponse));
-      
-      return data.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
-    } catch (error: any) {
-      console.error('Error fetching form responses:', error);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        submitted_at: doc.data().submitted_at instanceof Timestamp ? doc.data().submitted_at.toDate().toISOString() : doc.data().submitted_at,
+      })) as FormResponse[];
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error fetching form responses:', err);
       toast({
         title: 'Erro ao carregar respostas',
-        description: error.message,
+        description: err.message,
         variant: 'destructive',
       });
       return [];
     }
   };
-
-  useEffect(() => {
-    if (!user?.accountId) {
-      setLoading(false);
-      return;
-    }
-
-    // Realtime updates
-    const q = query(
-      collection(db, 'custom_forms'),
-      where('account_id', '==', user.accountId)
-    );
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomForm));
-      setForms(data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-      setLoading(false);
-    }, (error) => {
-      console.error('Realtime error:', error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user?.accountId]);
 
   return {
     forms,
@@ -234,6 +208,6 @@ export const useCustomForms = () => {
     deleteForm,
     getFormById,
     getFormResponses,
-    refresh: fetchForms,
+    refresh: () => {}, // onSnapshot handles it
   };
 };
